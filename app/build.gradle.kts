@@ -5,15 +5,15 @@ plugins {
 }
 
 android {
-    namespace = "com.downloader.social"
+    namespace = "org.oxoempire.socialdownloader"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.downloader.social"
+        applicationId = "org.oxoempire.socialdownloader"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
