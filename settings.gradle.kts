@@ -9,7 +9,6 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
-        maven("https://chaquo.com/maven")
     }
 }
 dependencyResolutionManagement {
@@ -18,7 +17,6 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven("https://jitpack.io")
-        maven("https://chaquo.com/maven")
     }
 }
 
