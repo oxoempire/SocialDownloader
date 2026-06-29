@@ -21,7 +21,7 @@
 import yt_dlp
 import os
 
-def download_video(url, output_dir, progress_callback):
+def download_video(url, output_dir, progress_callback, cookies_path=None):
     def hook(d):
         if d['status'] == 'downloading':
             try:
@@ -47,6 +47,8 @@ def download_video(url, output_dir, progress_callback):
         'quiet': True,
         'no_warnings': True,
     }
+    if cookies_path and os.path.exists(cookies_path):
+        ydl_opts['cookiefile'] = cookies_path
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])

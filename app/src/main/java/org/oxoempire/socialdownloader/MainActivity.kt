@@ -58,6 +58,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Cookie
 import android.Manifest
 import android.os.Build
 
@@ -186,6 +187,7 @@ fun MainScreen(initialUrl: String, themeMode: ThemeMode, onThemeChanged: (ThemeM
     var downloadedVideoUri by remember { mutableStateOf<Uri?>(null) }
     
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showCookiesDialog by remember { mutableStateOf(false) }
     
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -199,7 +201,7 @@ fun MainScreen(initialUrl: String, themeMode: ThemeMode, onThemeChanged: (ThemeM
                 Column {
                     Text("Autor: Manu Cabello")
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Versión: 1.0")
+                    Text("Versión: 1.0.3")
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Plataformas soportadas: Facebook, Instagram, X, Tik Tok, Youtube.")
                     Spacer(modifier = Modifier.height(16.dp))
@@ -334,6 +336,12 @@ fun MainScreen(initialUrl: String, themeMode: ThemeMode, onThemeChanged: (ThemeM
                     )
                 }
             }
+            IconButton(onClick = { showCookiesDialog = true }) {
+                Icon(
+                    imageVector = Icons.Filled.Cookie,
+                    contentDescription = "Cookies"
+                )
+            }
             IconButton(onClick = { showAboutDialog = true }) {
                 Icon(
                     imageVector = Icons.Filled.Info,
@@ -341,6 +349,10 @@ fun MainScreen(initialUrl: String, themeMode: ThemeMode, onThemeChanged: (ThemeM
                 )
             }
         }
+    }
+    
+    if (showCookiesDialog) {
+        CookiesDialog(onDismiss = { showCookiesDialog = false })
     }
 }
 
@@ -376,8 +388,14 @@ suspend fun downloadVideo(
             AppLogger.log("Configurando petición de descarga para: $url")
             withContext(Dispatchers.Main) { onProgress(0f, "Obteniendo información del video...") }
             
+            val cookiesFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "cookies.txt")
+            val cookiesPath = if (cookiesFile.exists()) cookiesFile.absolutePath else null
+            if (cookiesPath != null) {
+                AppLogger.log("Usando archivo de cookies en: $cookiesPath")
+            }
+            
             // This is a blocking call in Python, but we are inside Dispatchers.IO
-            module.callAttr("download_video", url, downloadDir?.absolutePath, callback)
+            module.callAttr("download_video", url, downloadDir?.absolutePath, callback, cookiesPath)
             
             AppLogger.log("Descarga de Python completada.")
             
@@ -425,4 +443,78 @@ fun saveToGallery(context: Context, videoFile: File): Uri? {
         }
     }
     return uri
+}
+
+@Composable
+fun CookiesDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val cookiesFile = remember {
+        File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "cookies.txt")
+    }
+    var cookiesText by remember {
+        mutableStateOf(if (cookiesFile.exists()) cookiesFile.readText() else "")
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Configurar Cookies (yt-dlp)") },
+        text = {
+            Column {
+                Text(
+                    text = "Para descargar Reels u otras publicaciones que requieran iniciar sesión (o si Instagram bloquea tu IP), pega aquí las cookies en formato Netscape.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = cookiesText,
+                    onValueChange = { cookiesText = it },
+                    label = { Text("Contenido Netscape de cookies") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    maxLines = 10
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Tip: Usa extensiones de navegador de PC como 'Get cookies.txt LOCALLY' para obtenerlas en formato de texto.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                try {
+                    if (cookiesText.trim().isEmpty()) {
+                        if (cookiesFile.exists()) {
+                            cookiesFile.delete()
+                        }
+                    } else {
+                        cookiesFile.writeText(cookiesText)
+                    }
+                    AppLogger.log("Cookies guardadas correctamente.")
+                } catch (e: Exception) {
+                    AppLogger.log("Error al guardar cookies: ${e.message}")
+                }
+                onDismiss()
+            }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = {
+                if (cookiesFile.exists()) {
+                    try {
+                        cookiesFile.delete()
+                        AppLogger.log("Cookies eliminadas.")
+                    } catch (e: Exception) {
+                        AppLogger.log("Error al eliminar cookies: ${e.message}")
+                    }
+                }
+                onDismiss()
+            }) {
+                Text("Eliminar Cookies")
+            }
+        }
+    )
 }
